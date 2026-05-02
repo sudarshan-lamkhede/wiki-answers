@@ -210,6 +210,25 @@ def _print_stats(stats: Stats) -> None:
     )
 
 
+def answer_question(
+    client: anthropic.Anthropic,
+    classification_system: str,
+    system: str,
+    question: str,
+    stats: Stats,
+) -> str:
+    """Classify then answer, or return the default rejection message."""
+    classification = _classify_question(
+        client, classification_system, question, stats
+    )
+    if (
+        classification.intent == 'information-seeking'
+        and classification.topic == 'wiki'
+    ):
+        return get_answer(client, system, question, stats)
+    return DEFAULT_MESSAGE
+
+
 def main() -> None:
     try:
         system = _load_system_prompt()
@@ -233,16 +252,9 @@ def main() -> None:
             break
 
         try:
-            classification = _classify_question(
-                client, classification_system, question, stats
+            answer = answer_question(
+                client, classification_system, system, question, stats
             )
-            if (
-                classification.intent == 'information-seeking'
-                and classification.topic == 'wiki'
-            ):
-                answer = get_answer(client, system, question, stats)
-            else:
-                answer = DEFAULT_MESSAGE
             print(f'{_prompt("Answer  ")}{answer}')
         except Exception as e:
             print(f'{ERROR_PREFIX}{e}')

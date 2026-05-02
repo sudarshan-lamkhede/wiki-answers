@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 WIKI_API = 'https://en.wikipedia.org/w/api.php'
 WIKI_BASE_URL = 'https://en.wikipedia.org/wiki/'
-USER_AGENT = 'wiki-search/1.0'
+USER_AGENT = 'WikiSearchTool/0.0 (sudarshan.lamkhede@gmail.com) non-commercial'
 TOP_N = 3
 EXTENDED_SNIPPET_TOKENS = 128
 

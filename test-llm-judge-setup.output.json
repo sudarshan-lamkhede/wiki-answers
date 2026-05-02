@@ -1,0 +1,30 @@
+[
+  {
+    "Question": "how big is bmc software in houston, tx",
+    "ProvidedAnswer": "Employing over 6,000, BMC is often credited with pioneering the BSM concept as a way to help better align IT operations with business needs.",
+    "GeneratedAnswer": "This query is better answered with web search or Claude.ai. This tool is only for querying Wikipedia using a Claude LLM",
+    "Judgement": "FALSE",
+    "Rationale": "The ProvidedAnswer gives relevant information about BMC Software's size (over 6,000 employees), while the GeneratedAnswer fails to provide any useful information about the question."
+  },
+  {
+    "Question": "how big is bmc software in houston, tx",
+    "ProvidedAnswer": "For 2011, the company recorded an annual revenue of $2.1 billion, making it the #20 largest software company in terms of revenue for that year.",
+    "GeneratedAnswer": "This query is better answered with web search or Claude.ai. This tool is only for querying Wikipedia using a Claude LLM",
+    "Judgement": "FALSE",
+    "Rationale": "The ProvidedAnswer provides relevant factual information about BMC Software's size (revenue of $2.1 billion in 2011, ranked #20 largest software company), while the GeneratedAnswer fails to provide any useful information."
+  },
+  {
+    "Question": "how long was i love lucy on the air",
+    "ProvidedAnswer": "The black-and-white series originally ran from October 15, 1951, to May 6, 1957, on the Columbia Broadcasting System (CBS).",
+    "GeneratedAnswer": "**I Love Lucy** aired for **nearly 6 years**, from **October 15, 1951, to May 6, 1957** on CBS. During this period, 180 half-hour episodes were produced across six seasons.",
+    "Judgement": "FALSE",
+    "Rationale": "The ProvidedAnswer is more concise and correct, while the GeneratedAnswer adds unnecessary extra information about episode count and seasons that wasn't asked."
+  },
+  {
+    "Question": "how did armando christian perez become famous",
+    "ProvidedAnswer": "Armando Pérez (born January 15, 1981), better known by his stage name Pitbull, is an American rapper, songwriter, and record producer.",
+    "GeneratedAnswer": "Based on the Wikipedia article, **Armando Christian Pérez**, professionally known as **Pitbull**, became famous through his music career:\n\n- He **began his career in the early 2000s** as a reggaeton, Latin hip-hop, and crunk performer\n- He signed with **TVT Records** and released his debut album **M.I.A.M.I. (2004)**, executive produced by Lil Jon\n- His **mainstream breakthrough came with his fourth album, \"Pitbull Starring in Rebelution\" (2009)**, which produced hit singles including:\n  - **\"I Know You Want Me (Calle Ocho)\"** (peaked at #2 on Billboard Hot 100)\n",
+    "Judgement": "TRUE",
+    "Rationale": "The GeneratedAnswer provides specific details about how Pitbull became famous (music career, debut album, breakthrough singles), while the ProvidedAnswer only states who he is without explaining how he became famous."
+  }
+]

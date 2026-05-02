@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 KEEP_COLUMNS = ('QuestionID', 'Question', 'Sentence')
+OUTPUT_COLUMNS = ('QuestionID', 'Question', 'ProvidedAnswer')
 LABEL_COLUMN = 'Label'
 POSITIVE_LABEL = '1'
 
