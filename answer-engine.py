@@ -6,8 +6,10 @@ import sys
 import threading
 import time
 from pathlib import Path
+from typing import Literal
 
 import anthropic
+from pydantic import BaseModel
 
 _wiki_spec = importlib.util.spec_from_file_location(
     'wiki_search', Path(__file__).parent / 'wiki-search.py'
@@ -18,6 +20,7 @@ search_wikipedia = _wiki_mod.search_wikipedia
 
 MODEL = 'claude-haiku-4-5'
 SYSTEM_PROMPT_PATH = Path('system-prompt.md')
+CLASSIFICATION_PROMPT_PATH = Path('system-prompt-is-wiki.md')
 BRACKET_COLOR = '\033[38;2;185;102;72m'
 RESET = '\033[0m'
 ERROR_PREFIX = (
@@ -29,6 +32,10 @@ INTRO = (
     "Strictly single-turn i.e. response will be only based on the current "
     "question and will not consider prior conversation. "
     "Submit '/end' to stop the program."
+)
+DEFAULT_MESSAGE = (
+    'This query is better answered with web search or Claude.ai. '
+    'This tool is only for querying Wikipedia using a Claude LLM'
 )
 MAX_TOOL_CALLS = 3
 WIKI_SEARCH_TOOL = {
@@ -49,6 +56,11 @@ WIKI_SEARCH_TOOL = {
         'required': ['query'],
     },
 }
+
+
+class Classification(BaseModel):
+    intent: Literal['information-seeking', 'other']
+    topic: Literal['wiki', 'non-wiki']
 
 
 def _colored(text: str) -> str:
@@ -83,6 +95,19 @@ def _format_search_results(results: list) -> str:
             f'   Article text: {r.extended_snippet}'
         )
     return '\n\n'.join(parts)
+
+
+def _classify_question(
+    client: anthropic.Anthropic, system: str, question: str
+) -> Classification:
+    response = client.messages.parse(
+        model=MODEL,
+        max_tokens=64,
+        system=system,
+        messages=[{'role': 'user', 'content': question}],
+        output_format=Classification,
+    )
+    return response.parsed_output
 
 
 def _execute_tool(name: str, tool_input: dict) -> str:
@@ -144,6 +169,9 @@ def get_answer(client: anthropic.Anthropic, system: str, question: str) -> str:
 def main() -> None:
     try:
         system = _load_system_prompt()
+        classification_system = CLASSIFICATION_PROMPT_PATH.read_text(
+            encoding='utf-8'
+        )
     except OSError as e:
         print(f'{ERROR_PREFIX}{e}')
         sys.exit(1)
@@ -160,7 +188,16 @@ def main() -> None:
             break
 
         try:
-            answer = get_answer(client, system, question)
+            classification = _classify_question(
+                client, classification_system, question
+            )
+            if (
+                classification.intent == 'information-seeking'
+                and classification.topic == 'wiki'
+            ):
+                answer = get_answer(client, system, question)
+            else:
+                answer = DEFAULT_MESSAGE
             print(f'{_prompt("Answer  ")}{answer}')
         except Exception as e:
             print(f'{ERROR_PREFIX}{e}')
