@@ -5,6 +5,7 @@ import importlib.util
 import sys
 import threading
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -58,6 +59,14 @@ WIKI_SEARCH_TOOL = {
 }
 
 
+@dataclass
+class Stats:
+    tool_calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    ttft_ms: list[float] = field(default_factory=list)
+
+
 class Classification(BaseModel):
     intent: Literal['information-seeking', 'other']
     topic: Literal['wiki', 'non-wiki']
@@ -98,8 +107,12 @@ def _format_search_results(results: list) -> str:
 
 
 def _classify_question(
-    client: anthropic.Anthropic, system: str, question: str
+    client: anthropic.Anthropic,
+    system: str,
+    question: str,
+    stats: Stats,
 ) -> Classification:
+    start = time.perf_counter()
     response = client.messages.parse(
         model=MODEL,
         max_tokens=64,
@@ -107,6 +120,9 @@ def _classify_question(
         messages=[{'role': 'user', 'content': question}],
         output_format=Classification,
     )
+    stats.ttft_ms.append((time.perf_counter() - start) * 1000)
+    stats.input_tokens += response.usage.input_tokens
+    stats.output_tokens += response.usage.output_tokens
     return response.parsed_output
 
 
@@ -116,7 +132,9 @@ def _execute_tool(name: str, tool_input: dict) -> str:
     return f'Unknown tool: {name}'
 
 
-def _call_api(client: anthropic.Anthropic, system: str, question: str) -> str:
+def _call_api(
+    client: anthropic.Anthropic, system: str, question: str, stats: Stats
+) -> str:
     messages: list = [{'role': 'user', 'content': question}]
     tool_calls_used = 0
     while True:
@@ -128,7 +146,18 @@ def _call_api(client: anthropic.Anthropic, system: str, question: str) -> str:
         }
         if tool_calls_used < MAX_TOOL_CALLS:
             kwargs['tools'] = [WIKI_SEARCH_TOOL]
-        response = client.messages.create(**kwargs)
+        start = time.perf_counter()
+        ttft_recorded = False
+        with client.messages.stream(**kwargs) as stream:
+            for event in stream:
+                if not ttft_recorded and event.type == 'content_block_delta':
+                    stats.ttft_ms.append(
+                        (time.perf_counter() - start) * 1000
+                    )
+                    ttft_recorded = True
+            response = stream.get_final_message()
+        stats.input_tokens += response.usage.input_tokens
+        stats.output_tokens += response.usage.output_tokens
         if response.stop_reason == 'end_turn':
             return next(
                 block.text for block in response.content if block.type == 'text'
@@ -145,10 +174,13 @@ def _call_api(client: anthropic.Anthropic, system: str, question: str) -> str:
                     'content': _execute_tool(block.name, block.input),
                 })
                 tool_calls_used += 1
+                stats.tool_calls += 1
         messages.append({'role': 'user', 'content': tool_results})
 
 
-def get_answer(client: anthropic.Anthropic, system: str, question: str) -> str:
+def get_answer(
+    client: anthropic.Anthropic, system: str, question: str, stats: Stats
+) -> str:
     """Call the API with one automatic retry on failure."""
     stop_event = threading.Event()
     spinner = threading.Thread(target=_run_spinner, args=(stop_event,))
@@ -157,13 +189,25 @@ def get_answer(client: anthropic.Anthropic, system: str, question: str) -> str:
     try:
         for attempt in range(2):
             try:
-                return _call_api(client, system, question)
+                return _call_api(client, system, question, stats)
             except Exception:
                 if attempt == 1:
                     raise
     finally:
         stop_event.set()
         spinner.join()
+
+
+def _print_stats(stats: Stats) -> None:
+    avg_ttft = (
+        sum(stats.ttft_ms) / len(stats.ttft_ms) if stats.ttft_ms else 0.0
+    )
+    print(
+        f'\nTotal tool invocations  : {stats.tool_calls}\n'
+        f'Total request tokens    : {stats.input_tokens}\n'
+        f'Total response tokens   : {stats.output_tokens}\n'
+        f'Avg time to first token : {avg_ttft:.1f} ms'
+    )
 
 
 def main() -> None:
@@ -177,6 +221,7 @@ def main() -> None:
         sys.exit(1)
 
     client = anthropic.Anthropic()
+    stats = Stats()
     print(INTRO)
 
     while True:
@@ -189,19 +234,21 @@ def main() -> None:
 
         try:
             classification = _classify_question(
-                client, classification_system, question
+                client, classification_system, question, stats
             )
             if (
                 classification.intent == 'information-seeking'
                 and classification.topic == 'wiki'
             ):
-                answer = get_answer(client, system, question)
+                answer = get_answer(client, system, question, stats)
             else:
                 answer = DEFAULT_MESSAGE
             print(f'{_prompt("Answer  ")}{answer}')
         except Exception as e:
             print(f'{ERROR_PREFIX}{e}')
             sys.exit(1)
+
+    _print_stats(stats)
 
 
 if __name__ == '__main__':
