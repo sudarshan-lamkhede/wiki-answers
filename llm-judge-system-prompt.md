@@ -7,7 +7,7 @@ Only being correct is necessary but not sufficient for a good answer.
 
 # INPUT
 Format: JSON
-Schema: {"Question": "", "ProvidedAnswer": "", "GeneratedAnswer": ""}
+Schema: {"Question": "", "ProvidedAnswer": "", "GeneratedAnswer": "", "ProvideRationale": true}
 
 # OUTPUT
 Format: JSON.
@@ -19,5 +19,5 @@ Output a single token as "Judgment":
    * "TIE": Both are equally good.
    * "NONE": Neither answers are good or valid.
 ## Rationale
-Output a short, single sentence, rationale for the "Judgement" 
+Output a short, single sentence, rationale for the "Judgement" only if "ProvideRationale" is true. 
 
