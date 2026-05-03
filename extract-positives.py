@@ -20,7 +20,7 @@ def extract_positives(input_path: Path, output_path: Path) -> int:
         reader = csv.DictReader(infile, delimiter='\t')
         writer = csv.DictWriter(
             outfile,
-            fieldnames=KEEP_COLUMNS,
+            fieldnames=OUTPUT_COLUMNS,
             delimiter='\t',
             extrasaction='ignore',
         )
@@ -28,7 +28,7 @@ def extract_positives(input_path: Path, output_path: Path) -> int:
         count = 0
         for row in reader:
             if row[LABEL_COLUMN] == POSITIVE_LABEL:
-                writer.writerow({col: row[col] for col in KEEP_COLUMNS})
+                writer.writerow({ocol: row[icol] for (icol,ocol) in zip(KEEP_COLUMNS, OUTPUT_COLUMNS)})
                 count += 1
     return count
 
