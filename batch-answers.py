@@ -19,7 +19,7 @@ Stats = _mod.Stats
 
 SYSTEM_PROMPT_PATH = Path('system-prompt.md')
 CLASSIFICATION_PROMPT_PATH = Path('system-prompt-is-wiki.md')
-OUTPUT_COLUMNS = ('QuestionID', 'Question', 'Sentence', 'GeneratedAnswer')
+OUTPUT_COLUMNS = ('QuestionID', 'Question', 'ProvidedAnswer', 'GeneratedAnswer')
 
 
 def _load_rows(path: Path) -> list[dict]:
@@ -40,7 +40,7 @@ def _write_output(
             writer.writerow({
                 'QuestionID': row['QuestionID'],
                 'Question': row['Question'],
-                'Sentence': row['Sentence'],
+                'ProvidedAnswer': row['Sentence'],
                 'GeneratedAnswer': answer,
             })
 

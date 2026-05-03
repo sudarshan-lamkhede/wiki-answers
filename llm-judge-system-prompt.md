@@ -4,6 +4,7 @@ An answer is better if it has both of the following characteristics:
    * Correctness: correctly answers the question per information in wikipedia
    * Conciseness: contains all necessary information but has no or minimum extra information that is not explicitly asked in the question. 
 Only being correct is necessary but not sufficient for a good answer.
+GeneratedAnswer is in Markdown format. Do not apply any penalty for the markdown syntax in the answer.
 
 # INPUT
 Format: JSON
