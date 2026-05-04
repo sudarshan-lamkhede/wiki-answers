@@ -11,7 +11,7 @@ ANSWER_TSV=$2".answers.tsv"
 JUDGED_TSV=$2".judged.json"
 
 echo "\n`date`: Generating answers..."
-#python3 batch-answers.py $INPUT_TSV $ANSWER_TSV
+python3 batch-answers.py $INPUT_TSV $ANSWER_TSV
 
 echo "\n`date`: Judging the genereated answers..."
 python3 llm-judge.py $ANSWER_TSV $JUDGED_TSV

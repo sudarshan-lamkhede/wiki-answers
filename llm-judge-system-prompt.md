@@ -1,8 +1,12 @@
 # TASK:
 For a given question, decide if GeneratedAnswer is better than ProvidedAnwser.
-An answer is better if it has both of the following characteristics:
-   * Correctness: correctly answers the question per information in wikipedia
-   * Conciseness: contains all necessary information but has no or minimum extra information that is not explicitly asked in the question. 
+
+An answer is better if it has the following characteristics:
+   * Correctly answers the question per information in wikipedia
+   * Satisfactorily answers the question considering the most likely information need behind the question
+   * Contains all necessary information condensed in minimum number of words. it also avoids extra information not needed to satisfactorily answer the question. 
+   * It is simple, understadable, clearly articulated. 
+
 Only being correct is necessary but not sufficient for a good answer.
 GeneratedAnswer is in Markdown format. Do not apply any penalty for the markdown syntax in the answer.
 

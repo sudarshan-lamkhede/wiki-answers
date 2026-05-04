@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Interactive answer engine using Claude Haiku and Wikipedia."""
 
+import argparse
 import importlib.util
 import sys
 import threading
@@ -216,8 +217,11 @@ def answer_question(
     system: str,
     question: str,
     stats: Stats,
+    cache: dict[str, str],
 ) -> str:
     """Classify then answer, or return the default rejection message."""
+    if question in cache:
+        return cache[question]
     classification = _classify_question(
         client, classification_system, question, stats
     )
@@ -225,11 +229,36 @@ def answer_question(
         classification.intent == 'information-seeking'
         and classification.topic == 'wiki'
     ):
-        return get_answer(client, system, question, stats)
-    return DEFAULT_MESSAGE
+        answer = get_answer(client, system, question, stats)
+    else:
+        answer = DEFAULT_MESSAGE
+    cache[question] = answer
+    return answer
+
+
+def _ask_feedback() -> str:
+    prompt = (
+        f'{_colored("[")}'
+        'Feedback'
+        f'{_colored("] >>> ")}'
+        'y: Yes, n: No, SPACE: no opinion / skip  '
+    )
+    try:
+        raw = input(prompt).strip().lower()
+    except EOFError:
+        return ''
+    return raw if raw in ('y', 'n') else ''
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description='Wikipedia answer engine.')
+    parser.add_argument(
+        '--feedback',
+        action='store_true',
+        help='Ask for feedback after each answer',
+    )
+    args = parser.parse_args()
+
     try:
         system = _load_system_prompt()
         classification_system = CLASSIFICATION_PROMPT_PATH.read_text(
@@ -241,6 +270,10 @@ def main() -> None:
 
     client = anthropic.Anthropic()
     stats = Stats()
+    cache: dict[str, str] = {}
+    total_questions = 0
+    positive_feedback = 0
+    negative_feedback = 0
     print(INTRO)
 
     while True:
@@ -253,14 +286,28 @@ def main() -> None:
 
         try:
             answer = answer_question(
-                client, classification_system, system, question, stats
+                client, classification_system, system, question, stats,
+                cache,
             )
             print(f'{_prompt("Answer  ")}{answer}')
+            total_questions += 1
+            if args.feedback:
+                fb = _ask_feedback()
+                if fb == 'y':
+                    positive_feedback += 1
+                elif fb == 'n':
+                    negative_feedback += 1
         except Exception as e:
             print(f'{ERROR_PREFIX}{e}')
             sys.exit(1)
 
     _print_stats(stats)
+    if args.feedback:
+        print(
+            f'\nTotal questions  : {total_questions}\n'
+            f'Positive (y)     : {positive_feedback}\n'
+            f'Negative (n)     : {negative_feedback}'
+        )
 
 
 if __name__ == '__main__':

@@ -63,6 +63,7 @@ def main() -> None:
 
     client = anthropic.Anthropic()
     stats = Stats()
+    cache: dict[str, str] = {}
 
     rows = _load_rows(input_path)
     print(f'Loaded {len(rows)} rows from {input_path}')
@@ -71,7 +72,8 @@ def main() -> None:
     for i, row in enumerate(rows, 1):
         print(f'[{i}/{len(rows)}] {row["Question"]}')
         answers.append(answer_question(
-            client, classification_system, system, row['Question'], stats
+            client, classification_system, system, row['Question'], stats,
+            cache,
         ))
         # time.sleep(2)
 
