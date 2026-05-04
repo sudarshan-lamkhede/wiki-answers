@@ -1,15 +1,32 @@
+# Setup instructions
+
+
+# Interactive CLI
+```bash
+python3 answer-engine.py --demo
+```
+This will start the tool in a quick demo mode (non-interactive)
+
+You can invoke the tool as
+```bash
+python3 answer-engine.py
+```
+to run a normal internal CLI version.
+
+
 # Code Structure
-`wiki-search.py` Wikipedia Search tool using MediaWiki API
-`answer-engine.py` Interactive CLI tool to get answers for questions using Claude Haiku and the Wikipedia Search tool
-`batch-answers.py` Non interactive answer generation using the implementation in `answer-engine.py`
-`llm-judge.py` Judge whether provided ("golden label") is better than generated answer
-`evaluation.py` Generate metrics based on judgements from the LLM-judge; Also summarize the judge's rationale.
-`extract-positives.py` Extract only positives from WikiQA dataset. We don't consider negative labels here.
+   * `wiki-search.py` Wikipedia Search tool using MediaWiki API
+   * `answer-engine.py` Interactive CLI tool to get answers for questions using Claude Haiku and the Wikipedia Search tool
+   * `batch-answers.py` Non interactive answer generation using the implementation in `answer-engine.py`
+   * `llm-judge.py` Judge whether provided ("golden label") is better than generated answer
+   * `evaluation.py` Generate metrics based on judgements from the LLM-judge; Also summarize the judge's rationale.
+   * `extract-positives.py` Extract only positives from WikiQA dataset. We don't consider negative labels here.
 
 # Prompts
-`system-prompt.md`: Main prompt to produce answer using the Wiki search tool.
-`system-prompt-is-wiki.md`: To decide whether the input is anwerable using Wikipedia content
-`llm-judge-system-prompt.md`: Guidelines for the llm-as-judge 
+   * `system-prompt.md`: Main prompt to produce answer using the Wiki search tool.
+   * `system-prompt-is-wiki.md`: To decide whether the input is anwerable using Wikipedia content
+   * `llm-judge-system-prompt.md`: Guidelines for the llm-as-judge 
+
 
 
 # Iteration Loop
@@ -44,3 +61,6 @@ Summary of rationales for Judgement=FALSE: ...
 bash eval.sh input.tsv run_name
 ```
 Of course, don't forget to tune the prompt(s) and/or code to address the observations from the run. 
+
+# User Feedback
+With `--feedback` option to the `answer-engine.py` you can provide your feedback. Currently it only counts positive and negative feedback.  Doesn't refine the answers based on it (it's a TODO item)

@@ -4,8 +4,10 @@
 import argparse
 import importlib.util
 import sys
+import termios
 import threading
 import time
+import tty
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -21,6 +23,7 @@ _wiki_spec.loader.exec_module(_wiki_mod)
 search_wikipedia = _wiki_mod.search_wikipedia
 
 MODEL = 'claude-haiku-4-5'
+TEMPERATURE = 0.0
 SYSTEM_PROMPT_PATH = Path('system-prompt.md')
 CLASSIFICATION_PROMPT_PATH = Path('system-prompt-is-wiki.md')
 BRACKET_COLOR = '\033[38;2;185;102;72m'
@@ -117,6 +120,7 @@ def _classify_question(
     response = client.messages.parse(
         model=MODEL,
         max_tokens=64,
+        temperature=TEMPERATURE,
         system=system,
         messages=[{'role': 'user', 'content': question}],
         output_format=Classification,
@@ -142,6 +146,7 @@ def _call_api(
         kwargs: dict = {
             'model': MODEL,
             'max_tokens': 1024,
+            'temperature': TEMPERATURE,
             'system': system,
             'messages': messages,
         }
@@ -236,6 +241,19 @@ def answer_question(
     return answer
 
 
+def _read_single_key() -> str:
+    fd = sys.stdin.fileno()
+    try:
+        old = termios.tcgetattr(fd)
+    except termios.error:
+        return sys.stdin.read(1)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
 def _ask_feedback() -> str:
     prompt = (
         f'{_colored("[")}'
@@ -243,11 +261,10 @@ def _ask_feedback() -> str:
         f'{_colored("] >>> ")}'
         'y: Yes, n: No, SPACE: no opinion / skip  '
     )
-    try:
-        raw = input(prompt).strip().lower()
-    except EOFError:
-        return ''
-    return raw if raw in ('y', 'n') else ''
+    print(prompt, end='', flush=True)
+    key = _read_single_key()
+    print()
+    return key if key in ('y', 'n') else ''
 
 
 def main() -> None:
@@ -256,6 +273,11 @@ def main() -> None:
         '--feedback',
         action='store_true',
         help='Ask for feedback after each answer',
+    )
+    parser.add_argument(
+        '--demo',
+        action='store_true',
+        help='Run a single demo question non-interactively and exit',
     )
     args = parser.parse_args()
 
@@ -274,15 +296,23 @@ def main() -> None:
     total_questions = 0
     positive_feedback = 0
     negative_feedback = 0
+    demo_answered = False
     print(INTRO)
 
     while True:
-        try:
-            question = input(_prompt('Question'))
-        except EOFError:
-            break
-        if question.strip() == '/end':
-            break
+        if args.demo:
+            if demo_answered:
+                print(f'{_prompt("Question")}/end')
+                break
+            question = "what's the goldilocks zone?"
+            print(f'{_prompt("Question")}{question}')
+        else:
+            try:
+                question = input(_prompt('Question'))
+            except EOFError:
+                break
+            if question.strip() == '/end':
+                break
 
         try:
             answer = answer_question(
@@ -301,10 +331,14 @@ def main() -> None:
             print(f'{ERROR_PREFIX}{e}')
             sys.exit(1)
 
+        if args.demo:
+            demo_answered = True
+
     _print_stats(stats)
     if args.feedback:
         print(
-            f'\nTotal questions  : {total_questions}\n'
+            '\nfeedback metrics from the current interactive Q&A session\n'
+            f'Total questions  : {total_questions}\n'
             f'Positive (y)     : {positive_feedback}\n'
             f'Negative (n)     : {negative_feedback}'
         )
