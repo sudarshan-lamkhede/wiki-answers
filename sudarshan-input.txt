@@ -1,0 +1,60 @@
+1. /init
+
+2. add following instructions for the project in CLAUDE.md:
+   - Use Python 3
+   - Minimize external dependencies; prefer the standard library
+   - Prioritize simplicity, clarity, and readability over performance
+   - Use type hints throughout
+   - Use `unittest` for testing
+   - Use Pydantic for data validation and type enforcement
+
+3. create an interactive CLI tool. When run, print [intro text]... '[Question] >>>' prompt... '[Answer] >>>' prefix... dummy_answer function... '[' and '] >>>' should be in 'B96648' hex color. Add a simple spinner for 3 seconds before printing the answer.
+
+4. Create answer-engine.py. Use Claude API to invoke Haiku 4.5 model (claude-haiku-4-5). Populate the prompt... system-prompt.md for system role... Print the response from the model as the answer instead of the dummy answer. Use the spinner only until full response from the API is not received. Retry second time if there is an error first time. If still not successful print the error message with prefix 'Unable to retrieve documents and/or generate answer because of the following error: \n\n' and then terminate the program.
+
+5. create a standalone tool in wiki-search.py to search Wikipedia using its API. It will retrieve top 3 results along with - (1) article title (2) API returned snippet (3) article URL (4) extended snippet. Create the extended snippet by fetching the full article text and extracting the first 128 tokens of it. Print the result set in a well formatted markdown.
+
+6. create a 'wiki-search' tool for Claude using the implementation in wiki-search.py
+
+7. Update the answer-engine.py to: print tool calls with inputs e.g. 'using wiki-search tool with 'query'' where 'query' is the search terms passed to the tool. restrict tool usage to max 3 times in answering a single question from the user
+
+8. modify answer-engine.py to create an input classification call to the model based on system-prompt-is-wiki.md to classify user input into 'information-seeking' or 'other' AND 'wiki' or 'non-wiki'. Only if, the classification are 'information-seeking' and 'wiki' proceed to answer the query with the tool call. Else print a default message: 'This query is better answered with web search or Claude.ai. This tool is only for querying Wikipedia using a Claude LLM'
+
+9. Keep a track of number of total tool invocations, number of tokens sent to the API, number of tokens received from the API, time in milliseconds to the first token for each call. Print total number of tool invocation, total number of request tokens, total number of response tokens, and average time to first token when the program terminates.
+
+10. write a python script ("extract-positives.py") to extract rows where "Label" is "1" in a TSV file. Retain only "QuestionID", "Question", "Sentence" columns. Run it on WikiQACorpus/WikiQA-dev.tsv. Save the output in WikiQACorpus/WikiQA-dev-positives.tsv
+
+11. create a batch-answers.py that can take a TSV file with 'QuestionID', 'Question', 'Sentence' and produce answers for each 'Question'. Write the output in a TSV as 'QuestionID', 'Question', 'Sentence', 'GeneratedAnswer'. Use batch messages API to Claude.
+
+12. in batch-answers.py read the SYSTEM_PROMPT from system-prompt.md
+
+13. in answer-engine.py refactor main() - put lines 236 through 245 in a answer_question() function. write a unit test for the function.
+
+14. use "answer_question" function in batch-answers.py to get the output instead of current batch messaging logic.
+
+15. what user agent is being used for wiki API?
+
+16. create a llm-judge.py to implement evaluation of answer-engine.py using a powerful LLM "claude-sonnet-4-6".
+    1) read input from a TSV file containing: QuestionID, Question, ProvidedAnswer, and GeneratedAnswer
+    2) use system prompt from "llm-judge-system-prompt.md"
+    3) use batch message API for Claude
+    4) send the Question, ProvidedAnswer, and GeneratedAnswer to Claude as a JSON with schema '{"Question": "", "ProvidedAnswer": "", "GeneratedAnswer": ""}'
+    5) write the output as a JSON file with schema '{"Question": "", "ProvidedAnswer": "", "GeneratedAnswer": "", "Judgement":"", "Rationale": ""}'
+
+17. create evaluation.py
+    1) read data from a JSON file with schema: {"Question": "", "ProvidedAnswer":"", "GeneratedAnswer":"", "Judgement":"", "Rationale":""}
+    2) GeneratedAnswerPreferred = number of records where Judgement is TRUE divided by total number of records
+    3) ProvidedAnswersPreferred = number of records where Judgement is FALSE divided by total number of records
+    4) Tie = number of records where Judgement is TIE divided by total number of records
+    5) Neither = number of records where Judgement is NONE divided by total number of records
+    6) Print metrics: GeneratedAnswerPreferred, ProvidedAnswersPreferred, Tie, Neither, total number of records
+
+18. add option "--summary" to evaluation.py to summarize "Rationale" using 'claude-sonnet-4-6' when "Judgement" matches value provided as value of another command line option "--judgement".
+
+19. add an in-memory question-answer cache in answer-engine.py in form of a Python dictionary. If a question is repeated, it should get the stored answer.
+
+20. update batch-answers.py to provide the cache when a call to answer_question is made
+
+21. In answer-engine.py add a command line option "--feedback". When provided, after each answer, ask for user's feedback as "[Feedback] >>> y: Yes, n: No, SPACE: no opinion / skip". count and print: total the number of questions, times user provides 'y' (i.e. positive) feedback and 'n' (i.e. negative) feedback.
+
+22. can you export all prompts I provided to sudarshan-input.txt
