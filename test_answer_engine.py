@@ -43,7 +43,7 @@ class TestAnswerQuestion(unittest.TestCase):
             )
             self.assertEqual(result, 'Python is a programming language.')
             mock_get_answer.assert_called_once_with(
-                self.client, self.system, self.question, self.stats
+                self.client, self.system, self.question, self.stats, False
             )
 
     def test_other_intent_returns_default_message(self):

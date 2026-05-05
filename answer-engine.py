@@ -3,6 +3,7 @@
 
 import argparse
 import importlib.util
+import json
 import sys
 import termios
 import threading
@@ -110,12 +111,27 @@ def _format_search_results(results: list) -> str:
     return '\n\n'.join(parts)
 
 
+def _debug(label: str, data: dict) -> None:
+    print(f'\n=== {label} ===')
+    print(json.dumps(data, indent=2, default=str))
+
+
 def _classify_question(
     client: anthropic.Anthropic,
     system: str,
     question: str,
     stats: Stats,
+    debug: bool = False,
 ) -> Classification:
+    if debug:
+        _debug('CLASSIFY REQUEST', {
+            'model': MODEL,
+            'max_tokens': 64,
+            'temperature': TEMPERATURE,
+            'system': system,
+            'messages': [{'role': 'user', 'content': question}],
+            'output_format': 'Classification',
+        })
     start = time.perf_counter()
     response = client.messages.parse(
         model=MODEL,
@@ -128,6 +144,8 @@ def _classify_question(
     stats.ttft_ms.append((time.perf_counter() - start) * 1000)
     stats.input_tokens += response.usage.input_tokens
     stats.output_tokens += response.usage.output_tokens
+    if debug:
+        _debug('CLASSIFY RESPONSE', response.model_dump())
     return response.parsed_output
 
 
@@ -138,7 +156,8 @@ def _execute_tool(name: str, tool_input: dict) -> str:
 
 
 def _call_api(
-    client: anthropic.Anthropic, system: str, question: str, stats: Stats
+    client: anthropic.Anthropic, system: str, question: str, stats: Stats,
+    debug: bool = False,
 ) -> str:
     messages: list = [{'role': 'user', 'content': question}]
     tool_calls_used = 0
@@ -152,6 +171,8 @@ def _call_api(
         }
         if tool_calls_used < MAX_TOOL_CALLS:
             kwargs['tools'] = [WIKI_SEARCH_TOOL]
+        if debug:
+            _debug('API REQUEST', kwargs)
         start = time.perf_counter()
         ttft_recorded = False
         with client.messages.stream(**kwargs) as stream:
@@ -164,6 +185,8 @@ def _call_api(
             response = stream.get_final_message()
         stats.input_tokens += response.usage.input_tokens
         stats.output_tokens += response.usage.output_tokens
+        if debug:
+            _debug('API RESPONSE', response.model_dump())
         if response.stop_reason == 'end_turn':
             return next(
                 block.text for block in response.content if block.type == 'text'
@@ -185,7 +208,8 @@ def _call_api(
 
 
 def get_answer(
-    client: anthropic.Anthropic, system: str, question: str, stats: Stats
+    client: anthropic.Anthropic, system: str, question: str, stats: Stats,
+    debug: bool = False,
 ) -> str:
     """Call the API with one automatic retry on failure."""
     stop_event = threading.Event()
@@ -195,7 +219,7 @@ def get_answer(
     try:
         for attempt in range(2):
             try:
-                return _call_api(client, system, question, stats)
+                return _call_api(client, system, question, stats, debug)
             except Exception:
                 if attempt == 1:
                     raise
@@ -223,18 +247,19 @@ def answer_question(
     question: str,
     stats: Stats,
     cache: dict[str, str],
+    debug: bool = False,
 ) -> str:
     """Classify then answer, or return the default rejection message."""
     if question in cache:
         return cache[question]
     classification = _classify_question(
-        client, classification_system, question, stats
+        client, classification_system, question, stats, debug
     )
     if (
         classification.intent == 'information-seeking'
         and classification.topic == 'wiki'
     ):
-        answer = get_answer(client, system, question, stats)
+        answer = get_answer(client, system, question, stats, debug)
     else:
         answer = DEFAULT_MESSAGE
     cache[question] = answer
@@ -279,6 +304,11 @@ def main() -> None:
         action='store_true',
         help='Run a single demo question non-interactively and exit',
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Print API requests and responses',
+    )
     args = parser.parse_args()
 
     try:
@@ -317,7 +347,7 @@ def main() -> None:
         try:
             answer = answer_question(
                 client, classification_system, system, question, stats,
-                cache,
+                cache, args.debug,
             )
             print(f'{_prompt("Answer  ")}{answer}')
             total_questions += 1
